@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .step {
+            transition: all 0.3s ease-in-out;
+        }
+        .step-active {
+            background-color: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+        .step-inactive {
+            background-color: #e5e7eb;
+            color: #4b5563;
+        }
+        .step-complete {
+            background-color: #16a34a;
+            color: white;
+            border-color: #16a34a;
+        }
+        .step-line {
+            height: 2px;
+            background-color: #d1d5db;
+            flex-grow: 1;
+        }
+        .step-line-complete {
+            background-color: #16a34a;
+        }
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #FFF;
+            border-bottom-color: #4f46e5;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 flex items-center justify-center min-h-screen p-4">
+
+    <div id="app" class="w-full max-w-4xl bg-white rounded-xl shadow-lg p-6 md:p-10 space-y-8">
+        
+        <header class="text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Presentation Generator</h1>
+            <p class="text-gray-500 mt-2">Create stunning slideshows in just a few clicks.</p>
+        </header>
+
+        <!-- Project Search -->
+        <div id="project-search" class="bg-gray-100 p-4 rounded-lg">
+            <h2 class="font-semibold text-lg mb-2">Load Existing Project</h2>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <input type="text" id="project-id-input" placeholder="Enter Project ID" class="flex-grow p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                <button onclick="handleSearchProject()" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">Search Project</button>
+            </div>
+            <div id="project-status-display" class="mt-3 hidden text-sm space-y-1"></div>
+        </div>
+
+        <!-- Step Indicator -->
+        <div id="step-indicator" class="flex items-center w-full text-xs md:text-sm">
+            <div class="flex flex-col items-center relative text-center w-20 md:w-24">
+                <div id="step-node-1" class="step w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg z-10 border-2">1</div>
+                <p class="mt-2 font-medium">Script</p>
+            </div>
+            <div class="step-line"></div>
+            <div class="flex flex-col items-center relative text-center w-20 md:w-24">
+                <div id="step-node-2" class="step w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg z-10 border-2">2</div>
+                <p class="mt-2 font-medium">Logo</p>
+            </div>
+            <div class="step-line"></div>
+            <div class="flex flex-col items-center relative text-center w-20 md:w-24">
+                <div id="step-node-3" class="step w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg z-10 border-2">3</div>
+                <p class="mt-2 font-medium">Slides</p>
+            </div>
+            <div class="step-line"></div>
+            <div class="flex flex-col items-center relative text-center w-20 md:w-24">
+                <div id="step-node-4" class="step w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg z-10 border-2">4</div>
+                <p class="mt-2 font-medium">Images</p>
+            </div>
+             <div class="step-line"></div>
+            <div class="flex flex-col items-center relative text-center w-20 md:w-24">
+                <div id="step-node-5" class="step w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg z-10 border-2">5</div>
+                <p class="mt-2 font-medium">Transcript</p>
+            </div>
+            <div class="step-line"></div>
+            <div class="flex flex-col items-center relative text-center w-20 md:w-24">
+                <div id="step-node-6" class="step w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg z-10 border-2">6</div>
+                <p class="mt-2 font-medium">Audio</p>
+            </div>
+            <div class="step-line"></div>
+            <div class="flex flex-col items-center relative text-center w-20 md:w-24">
+                <div id="step-node-7" class="step w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg z-10 border-2">7</div>
+                <p class="mt-2 font-medium">Download</p>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <main class="relative min-h-[350px]">
+            <div id="loading-overlay" class="absolute inset-0 bg-white/80 flex flex-col items-center justify-center rounded-lg z-20 hidden">
+                <div class="loader"></div>
+                <p id="loading-message" class="mt-4 text-lg font-medium text-gray-700">Processing...</p>
+            </div>
+            <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
+                <strong class="font-bold">Error!</strong>
+                <span id="error-text" class="block sm:inline">Something went wrong.</span>
+            </div>
+
+            <!-- Step 1: Generate Script -->
+            <div id="step-1-content">
+                <h2 class="text-xl font-semibold mb-2">Step 1: Provide Your Content</h2>
+                <p class="text-gray-600 mb-4">Paste content and choose the desired length for the script.</p>
+                <textarea id="script-content" rows="8" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="e.g., The history of the internet..."></textarea>
+                <label for="script-length" class="font-medium mt-4 block">Script Length:</label>
+                <select id="script-length" class="w-full p-2 border border-gray-300 rounded-lg mt-1">
+                    <option value="small">Small (~1 minute)</option>
+                    <option value="medium" selected>Medium (~3 minutes)</option>
+                    <option value="long">Long (~5 minutes)</option>
+                </select>
+                <button onclick="handleGenerateScript()" class="mt-4 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition-colors">Generate Script</button>
+            </div>
+
+            <!-- Step 2: Upload Logo -->
+            <div id="step-2-content" class="hidden text-center">
+                 <h2 class="text-xl font-semibold mb-2">Step 2: Upload Your Logo (Optional)</h2>
+                 <div class="mt-4 flex flex-col items-center justify-center w-full">
+                     <label for="logo-upload" class="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-100">
+                         <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+                         <p id="file-name" class="text-xs text-gray-500">PNG, JPG (MAX. 5MB)</p>
+                         <input id="logo-upload" type="file" class="hidden" accept="image/png, image/jpeg" onchange="displayFileName()"/>
+                     </label>
+                 </div>
+                 <div class="flex gap-4 mt-6">
+                    <button onclick="handleUploadLogo()" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700">Upload & Continue</button>
+                    <button onclick="handleSkipLogo()" class="w-full bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-lg hover:bg-gray-300">Skip</button>
+                 </div>
+            </div>
+
+            <!-- Step 3: Generate Slides (HTML) -->
+            <div id="step-3-content" class="hidden">
+                 <h2 class="text-xl font-semibold mb-2">Step 3: Generate Slide HTML</h2>
+                 <label for="theme-select" class="font-medium mt-4 block">Presentation Theme:</label>
+                 <select id="theme-select" class="w-full p-2 border border-gray-300 rounded-lg mt-1">
+                     <option value="Theme 1" selected>Modern Dark</option>
+                     <option value="Theme 2">Classic Light</option>
+                     <option value="Theme 3">Vibrant</option>
+                 </select>
+                <button onclick="handleGenerateSlides()" class="mt-4 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700">Generate Slides</button>
+            </div>
+
+            <!-- Step 4: Generate Images -->
+            <div id="step-4-content" class="hidden">
+                 <h2 class="text-xl font-semibold mb-2">Step 4: Generate AI Images</h2>
+                 <label for="image-style" class="font-medium mt-4 block">Image Style:</label>
+                 <select id="image-style" class="w-full p-2 border border-gray-300 rounded-lg mt-1">
+                     <option value="realistic" selected>Realistic</option>
+                     <option value="3d">3D Render</option>
+                     <option value="painting">Painting</option>
+                 </select>
+                <button onclick="handleGenerateImages()" class="mt-4 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700">Generate Images</button>
+            </div>
+
+            <!-- Step 5: Generate Transcript -->
+            <div id="step-5-content" class="hidden">
+                <h2 class="text-xl font-semibold mb-2">Step 5: Generate Transcript</h2>
+                <label for="transcript-type" class="font-medium mt-4 block">Transcript Type:</label>
+                <select id="transcript-type" class="w-full p-2 border border-gray-300 rounded-lg mt-1">
+                    <option value="podcast" selected>Podcast (Two Speakers)</option>
+                    <option value="monologue">Monologue (One Speaker)</option>
+                </select>
+                <label for="transcript-length" class="font-medium mt-4 block">Transcript Length:</label>
+                 <select id="transcript-length" class="w-full p-2 border border-gray-300 rounded-lg mt-1">
+                    <option value="small">Small</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="long">Long</option>
+                </select>
+               <button onclick="handleGenerateTranscript()" class="mt-4 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700">Generate Transcript</button>
+           </div>
+
+            <!-- Step 6: Generate Audio -->
+            <div id="step-6-content" class="hidden">
+                <h2 class="text-xl font-semibold mb-2">Step 6: Generate Audio</h2>
+                <label for="audio-accent" class="font-medium mt-4 block">Speaker Accent:</label>
+                <select id="audio-accent" class="w-full p-2 border border-gray-300 rounded-lg mt-1">
+                    <option value="US" selected>US English</option>
+                    <option value="UK">UK English</option>
+                    <option value="IN">Indian English</option>
+                </select>
+               <button onclick="handleGenerateAudio()" class="mt-4 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700">Generate Audio</button>
+           </div>
+
+            <!-- Step 7: Download -->
+            <div id="step-7-content" class="hidden text-center">
+                 <h2 class="text-xl font-semibold mb-2">Step 7: Create & Download Your Slideshow</h2>
+                <button id="create-slideshow-btn" onclick="handleCreateSlideshow()" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700">Create Final Slideshow</button>
+                <a id="download-btn" href="#" download="slideshow.html" class="hidden w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 inline-block">Download Slideshow</a>
+                 <button onclick="resetApp()" class="mt-4 w-full text-indigo-600 font-semibold py-2 px-4 rounded-lg hover:bg-indigo-50">Start Over</button>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const TOTAL_STEPS = 7;
+        const state = {
+            projectId: null,
+            currentStep: 1,
+            isLoading: false,
+            transcriptType: 'podcast', // To remember for audio generation
+            baseUrl: "http://135.235.136.30/api",
+        };
+
+        const ui = {
+            loadingOverlay: document.getElementById('loading-overlay'),
+            loadingMessage: document.getElementById('loading-message'),
+            errorMessage: document.getElementById('error-message'),
+            errorText: document.getElementById('error-text'),
+            contentAreas: {},
+            stepNodes: {},
+            stepLines: {},
+            downloadButton: document.getElementById('download-btn'),
+            createSlideshowButton: document.getElementById('create-slideshow-btn'),
+            fileNameLabel: document.getElementById('file-name'),
+            projectStatusDisplay: document.getElementById('project-status-display'),
+        };
+
+        // Populate UI references dynamically
+        for (let i = 1; i <= TOTAL_STEPS; i++) {
+            ui.contentAreas[i] = document.getElementById(`step-${i}-content`);
+            ui.stepNodes[i] = document.getElementById(`step-node-${i}`);
+            if (i < TOTAL_STEPS) {
+                ui.stepLines[i] = document.querySelector(`#step-node-${i}`).parentElement.nextElementSibling;
+            }
+        }
+
+        function setLoading(isLoading, message = "Processing...") {
+            state.isLoading = isLoading;
+            ui.loadingOverlay.classList.toggle('hidden', !isLoading);
+            ui.loadingMessage.textContent = message;
+        }
+
+        function showError(message) {
+            ui.errorText.textContent = message;
+            ui.errorMessage.classList.remove('hidden');
+        }
+
+        function hideError() {
+            ui.errorMessage.classList.add('hidden');
+        }
+
+        function updateStepUI() {
+            for (let i = 1; i <= TOTAL_STEPS; i++) {
+                const node = ui.stepNodes[i];
+                const line = ui.stepLines[i];
+                const content = ui.contentAreas[i];
+
+                content.classList.add('hidden');
+                node.classList.remove('step-active', 'step-complete', 'step-inactive');
+                line?.classList.remove('step-line-complete');
+
+                if (i < state.currentStep) {
+                    node.classList.add('step-complete');
+                    node.innerHTML = `&#10003;`;
+                    if(line) line.classList.add('step-line-complete');
+                } else if (i === state.currentStep) {
+                    node.classList.add('step-active');
+                } else {
+                    node.classList.add('step-inactive');
+                }
+            }
+            ui.contentAreas[state.currentStep].classList.remove('hidden');
+        }
+
+        function displayFileName() {
+            const fileInput = document.getElementById('logo-upload');
+            if (fileInput.files.length > 0) {
+                ui.fileNameLabel.textContent = fileInput.files[0].name;
+                ui.fileNameLabel.classList.add('font-semibold', 'text-indigo-600');
+            }
+        }
+        
+        function resetApp() {
+            state.projectId = null;
+            state.currentStep = 1;
+            document.getElementById('script-content').value = '';
+            document.getElementById('logo-upload').value = '';
+            document.getElementById('project-id-input').value = '';
+            ui.fileNameLabel.textContent = 'PNG, JPG (MAX. 5MB)';
+            ui.fileNameLabel.classList.remove('font-semibold', 'text-indigo-600');
+            ui.projectStatusDisplay.classList.add('hidden');
+            ui.projectStatusDisplay.innerHTML = '';
+            
+            ui.downloadButton.classList.add('hidden');
+            ui.createSlideshowButton.classList.remove('hidden');
+
+            for (let i=1; i<=TOTAL_STEPS; i++) {
+                 ui.stepNodes[i].textContent = i;
+            }
+            hideError();
+            updateStepUI();
+        }
+
+        // --- API Call Handlers ---
+        async function handleGenerateScript() {
+            hideError();
+            const scriptContent = document.getElementById('script-content').value;
+            if (!scriptContent.trim()) return showError("Script content cannot be empty.");
+            const length = document.getElementById('script-length').value;
+
+            setLoading(true, "Generating script...");
+            try {
+                const response = await fetch(`${state.baseUrl}/generate-script`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ inputText: scriptContent, length: length }),
+                });
+                if (!response.ok) throw new Error( (await response.json()).detail || `HTTP error ${response.status}`);
+                const data = await response.json();
+                state.projectId = data.projectId;
+                state.currentStep = 2;
+                updateStepUI();
+            } catch (error) {
+                showError(`Failed to generate script: ${error.message}`);
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        async function handleUploadLogo() {
+            hideError();
+            const file = document.getElementById('logo-upload').files[0];
+            if (!file) return showError("Please select a logo file to upload.");
+            
+            setLoading(true, "Uploading logo...");
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${state.baseUrl}/${state.projectId}/upload-logo`, { method: 'POST', body: formData });
+                if (!response.ok) throw new Error((await response.json()).Error || `HTTP error ${response.status}`);
+                state.currentStep = 3;
+                updateStepUI();
+            } catch(error) {
+                showError(`Failed to upload logo: ${error.message}`);
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        function handleSkipLogo() {
+            hideError();
+            state.currentStep = 3;
+            updateStepUI();
+        }
+
+        async function handleGenerateSlides() {
+            hideError();
+            const themeName = document.getElementById('theme-select').value;
+            setLoading(true, "Generating slides...");
+            try {
+                const response = await fetch(`${state.baseUrl}/slide-image-generation`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ projectId: state.projectId, themeName }),
+                });
+                if (!response.ok) throw new Error((await response.json()).detail || `HTTP error ${response.status}`);
+                state.currentStep = 4;
+                updateStepUI();
+            } catch (error) {
+                showError(`Failed to generate slides: ${error.message}`);
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        async function handleGenerateImages() {
+            hideError();
+            const style = document.getElementById('image-style').value;
+            setLoading(true, "Generating AI images...");
+            try {
+                const response = await fetch(`${state.baseUrl}/image-generation`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ projectId: state.projectId, style }),
+                });
+                if (!response.ok) throw new Error((await response.json()).detail || `HTTP error ${response.status}`);
+                state.currentStep = 5;
+                updateStepUI();
+            } catch (error) {
+                showError(`Failed to generate images: ${error.message}`);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function handleGenerateTranscript() {
+            hideError();
+            const type = document.getElementById('transcript-type').value;
+            const length = document.getElementById('transcript-length').value;
+            state.transcriptType = type; // Save for audio step
+            const endpoint = type === 'monologue' ? 'make-monologue-transcript' : 'make-transcript';
+
+            setLoading(true, "Generating transcript...");
+            try {
+                const response = await fetch(`${state.baseUrl}/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ projectId: state.projectId, length }),
+                });
+                if (!response.ok) throw new Error((await response.json()).detail || `HTTP error ${response.status}`);
+                state.currentStep = 6;
+                updateStepUI();
+            } catch (error) {
+                showError(`Failed to generate transcript: ${error.message}`);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function handleGenerateAudio() {
+            hideError();
+            const accent = document.getElementById('audio-accent').value;
+            const endpoint = state.transcriptType === 'monologue' ? 'generate-monologue-audio' : 'generate-audio';
+            
+            setLoading(true, "Generating audio...");
+            try {
+                const response = await fetch(`${state.baseUrl}/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ projectId: state.projectId, accent }),
+                });
+                if (!response.ok) throw new Error((await response.json()).detail || `HTTP error ${response.status}`);
+                state.currentStep = 7;
+                updateStepUI();
+            } catch (error) {
+                showError(`Failed to generate audio: ${error.message}`);
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        async function handleCreateSlideshow() {
+            hideError();
+            setLoading(true, "Creating final slideshow...");
+            try {
+                 const response = await fetch(`${state.baseUrl}/create-slideshow?projectId=${state.projectId}`, { method: 'POST' });
+                 if (!response.ok) throw new Error((await response.json()).detail || `HTTP error ${response.status}`);
+                
+                const downloadUrl = `${state.baseUrl}/get-final-slideshow?projectId=${state.projectId}`;
+                ui.downloadButton.href = downloadUrl;
+                ui.createSlideshowButton.classList.add('hidden');
+                ui.downloadButton.classList.remove('hidden');
+            } catch (error) {
+                showError(`Failed to create slideshow: ${error.message}`);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function handleSearchProject() {
+            hideError();
+            const projectId = document.getElementById('project-id-input').value.trim();
+            if (!projectId) return showError("Please enter a Project ID.");
+            
+            setLoading(true, "Checking project status...");
+            state.projectId = projectId;
+            
+            const endpoints = {
+                script: `/script-content?projectId=${projectId}`,
+                slides: `/get-slide-htmls?projectId=${projectId}`,
+                images: `/images?projectId=${projectId}`,
+                transcript: `/transcript-content?projectId=${projectId}`,
+                audio: `/audio?projectId=${projectId}`,
+                slideshow: `/get-final-slideshow?projectId=${projectId}`
+            };
+
+            const statusChecks = Object.entries(endpoints).map(async ([key, endpoint]) => {
+                const response = await fetch(state.baseUrl + endpoint);
+                return { key, found: response.ok };
+            });
+
+            try {
+                const results = await Promise.all(statusChecks);
+                let nextStep = 1;
+                let statusHtml = '';
+                
+                const statusMap = results.reduce((acc, r) => ({...acc, [r.key]: r.found}), {});
+
+                statusHtml += `<p><strong>Script:</strong> ${statusMap.script ? '✅ Generated' : '❌ Not Generated'}</p>`;
+                if(statusMap.script) nextStep = 2; // Can do logo
+                
+                statusHtml += `<p><strong>Slide HTML:</strong> ${statusMap.slides ? '✅ Generated' : '❌ Not Generated'}</p>`;
+                if(statusMap.slides) nextStep = 4;
+
+                statusHtml += `<p><strong>Images:</strong> ${statusMap.images ? '✅ Generated' : '❌ Not Generated'}</p>`;
+                if(statusMap.images) nextStep = 5;
+
+                statusHtml += `<p><strong>Transcript:</strong> ${statusMap.transcript ? '✅ Generated' : '❌ Not Generated'}</p>`;
+                if(statusMap.transcript) nextStep = 6;
+                
+                statusHtml += `<p><strong>Audio:</strong> ${statusMap.audio ? '✅ Generated' : '❌ Not Generated'}</p>`;
+                if(statusMap.audio) nextStep = 7;
+
+                statusHtml += `<p><strong>Final Slideshow:</strong> ${statusMap.slideshow ? '✅ Generated' : '❌ Not Generated'}</p>`;
+
+                ui.projectStatusDisplay.innerHTML = statusHtml;
+                ui.projectStatusDisplay.classList.remove('hidden');
+
+                state.currentStep = nextStep;
+                updateStepUI();
+
+            } catch(error) {
+                showError("Could not fetch project status. Check Project ID and API server.");
+                resetApp();
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            updateStepUI();
+        });
+    </script>
+</body>
+</html>
+
